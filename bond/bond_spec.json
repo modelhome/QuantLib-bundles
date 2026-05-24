@@ -1,0 +1,15 @@
+{
+  "valuation_date": "2026-05-24",
+  "settlement_days": 2,
+  "calendar": "TARGET",
+  "business_convention": "Following",
+  "bond": {
+    "issue_date": "2020-06-01",
+    "maturity_date": "2030-06-01",
+    "coupon_rate": 0.05,
+    "frequency": "Semiannual",
+    "face": 100.0,
+    "day_count": "Thirty360"
+  },
+  "discount_curve": { "type": "flat", "rate": 0.04, "day_count": "Actual365Fixed" }
+}

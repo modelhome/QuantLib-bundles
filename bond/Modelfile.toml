@@ -1,0 +1,60 @@
+name = "quantlib_bond"
+# Prints the result JSON to stdout; the platform redirects it to the output file.
+run = "docker run --rm -v \"$PWD/run:/run\" ${IMAGE} ${ARGS} > run/bond_metrics.output.json"
+image = "modelhome/quantlib-bond:latest"
+args = ["{input:bond_spec}"]
+
+[resources]
+# QuantLib is lightweight (no JIT warmup like FinancePy's Numba path).
+memory = "1Gi"
+cpu = "1"
+
+[[inputs]]
+# Single input object describing the bond, the discount curve, and conventions.
+# required = [] keeps the model composable: when run downstream of a climate /
+# damage model, only `climate_risk_premium` may be present and every bond
+# parameter falls back to a documented default. When run standalone, supply the
+# full object via the input file.
+#
+# Shape:
+#   valuation_date        ISO date (default "2026-05-24")
+#   settlement_days       int     (default 2)
+#   calendar              "TARGET" | "UnitedStates" | "UnitedKingdom"
+#   business_convention   "Following" | "ModifiedFollowing" | "Unadjusted" | ...
+#   bond.issue_date       ISO date
+#   bond.maturity_date    ISO date
+#   bond.coupon_rate      decimal, e.g. 0.05
+#   bond.frequency        "Annual" | "Semiannual" | "Quarterly" | "Monthly"
+#   bond.face             number (default 100)
+#   bond.day_count        "Thirty360" | "ActualActual" | "Actual360" | "Actual365Fixed"
+#   discount_curve.type   "flat" | "zero_nodes"
+#     flat:        { "rate": 0.04, "day_count": "Actual365Fixed" }
+#     zero_nodes:  { "nodes": [ { "date": ISO, "rate": decimal }, ... ] }
+#   climate_risk_premium  decimal spread added in parallel to the curve (optional)
+name = "bond_spec"
+
+[inputs.schema]
+type = "object"
+required = []
+properties.valuation_date.type = "string"
+properties.climate_risk_premium.type = "number"
+properties.bond.type = "object"
+properties.discount_curve.type = "object"
+
+[[outputs]]
+name = "bond_metrics"
+
+[outputs.schema]
+type = "object"
+required = ["clean_price", "dirty_price", "accrued_interest", "ytm", "macaulay_duration", "modified_duration", "convexity", "bpv", "npv"]
+properties.npv.type = "number"
+properties.clean_price.type = "number"
+properties.dirty_price.type = "number"
+properties.accrued_interest.type = "number"
+properties.ytm.type = "number"
+properties.macaulay_duration.type = "number"
+properties.modified_duration.type = "number"
+properties.convexity.type = "number"
+properties.bpv.type = "number"
+properties.settlement_date.type = "string"
+properties.climate_risk_premium_applied.type = "number"

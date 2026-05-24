@@ -1,0 +1,21 @@
+{
+  "valuation_date": "2026-05-24",
+  "bond": {
+    "issue_date": "2024-01-15",
+    "maturity_date": "2034-01-15",
+    "coupon_rate": 0.045,
+    "frequency": "Semiannual",
+    "day_count": "ActualActual"
+  },
+  "discount_curve": {
+    "type": "zero_nodes",
+    "day_count": "Actual365Fixed",
+    "nodes": [
+      {"date": "2027-05-24", "rate": 0.038},
+      {"date": "2029-05-24", "rate": 0.041},
+      {"date": "2031-05-24", "rate": 0.043},
+      {"date": "2036-05-24", "rate": 0.046}
+    ]
+  },
+  "climate_risk_premium": 0.0125
+}
