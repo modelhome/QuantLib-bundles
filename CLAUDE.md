@@ -144,9 +144,11 @@ python bond/runner.py bond/bond_spec.json
   existing FinancePy model outputs `macauley_duration` (missing an 'a'). If the
   catalog should use consistent keys, decide whether to fix FinancePy or match
   its typo here. Currently: correct spelling kept here.
-- **Image build/push.** The `Modelfile` references `modelhome/quantlib-bond:latest`.
-  Building and pushing that image to Docker Hub is **deferred** — John will
-  handle the registry step. Don't automate a push without confirming the target.
+- **Image build/push.** Resolved: Model Home builds the image itself from the
+  bundle's Dockerfile and pushes it to the platform registry under a
+  deterministic `<upstream-sha>-<bundle-sha>` tag. No manual Docker Hub push
+  needed unless we want `modelhome/quantlib-bond:latest` to be independently
+  pullable off-platform.
 - **Curve bootstrapping.** The curve is currently flat or zero-node interpolated.
   Bootstrapping from market deposit/swap quotes (QuantLib's real strength) is a
   natural next extension, not yet built.
@@ -159,8 +161,14 @@ python bond/runner.py bond/bond_spec.json
 2. **Create a new GitHub repo** named `QuantLib-bundles` (new repo, *not* a fork)
    and push. Confirm with John whether it lives under the `modelhome` org or his
    personal account.
-3. **Build the `bond` image** and (after confirming the target with John) push it
-   to the registry referenced in `bond/Modelfile.toml`.
+3. **Register the bond bundle with Model Home.** The platform builds and tags
+   the image itself via BuildKit on registration (deterministic
+   `<upstream-sha>-<bundle-sha>` tag, pushed to the platform registry). The
+   `image` field in `Modelfile.toml` is a template variable substituted into
+   the `run` command (`${IMAGE}`), not a pull target — no manual `docker push`
+   is required for Model Home to run this bundle. (Independently publishing
+   `modelhome/quantlib-bond:latest` for off-platform `docker run` use would
+   be a separate decision.)
 4. **Add the bond model to Model Home** and run it end-to-end against the platform
    — both standalone (`bond_spec.json`) and via the composition hook — to confirm
    the Modelfile, image, and runner all wire up correctly.
