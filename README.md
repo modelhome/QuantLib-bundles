@@ -16,8 +16,8 @@ inside each bundle's image.
 ## Quick start
 
 ```bash
-cd bond
-docker build -t quantlib-bond:local .
+# from the repo root (build context matches the Model Home overlay shape)
+docker build -f bond/Dockerfile -t quantlib-bond:local .
 docker run --rm quantlib-bond:local
 ```
 
