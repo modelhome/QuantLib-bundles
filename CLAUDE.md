@@ -118,15 +118,19 @@ field to keep it purely standalone.
 
 ### Build & run locally
 
-Build context is the **bundle subfolder**:
+Build context is the **repo root** (not the `bond/` subfolder). Model Home's
+overlay machinery (`infra/helm/modelhome/scripts/overlay-bundle.sh`) clones the
+bundle to the BuildKit workspace root and wgets the Dockerfile to
+`$CTX/Dockerfile`; using repo-relative `COPY bond/...` paths keeps local and
+on-platform builds in sync. Run all `docker` commands from the repo root:
 
 ```bash
-cd bond
-docker build -t quantlib-bond:local .
+docker build -f bond/Dockerfile -t quantlib-bond:local .
 docker run --rm quantlib-bond:local                      # uses default bond_spec.json
-# or with mounted run dir, matching the Modelfile:
-mkdir -p run && cp bond_spec.json run/
-docker run --rm -v "$PWD/run:/run" quantlib-bond:local run/bond_spec.json > run/bond_metrics.output.json
+# or with mounted run dir, matching the Modelfile. The input path is absolute
+# because the runner opens it relative to WORKDIR=/app, not the /run mount.
+mkdir -p run && cp bond/bond_spec.json run/
+docker run --rm -v "$PWD/run:/run" quantlib-bond:local /run/bond_spec.json > run/bond_metrics.output.json
 ```
 
 Run the runner without Docker (for quick iteration):
