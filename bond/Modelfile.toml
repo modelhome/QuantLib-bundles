@@ -1,4 +1,5 @@
-name = "quantlib_bond"
+name = "Curve Bond Pricer"
+description = "Prices a fixed-rate bond off a constructed QuantLib discount curve (flat or zero-node interpolated). An optional `climate_risk_premium` is added as a parallel spread, so it can sit downstream of a climate/damage model — a curve-aware alternative to Climate Bond Pricer's flat-curve approach."
 # Prints the result JSON to stdout; the platform redirects it to the output file.
 run = "docker run --rm -v \"$PWD/run:/run\" ${IMAGE} ${ARGS} > run/bond_metrics.output.json"
 image = "modelhome/quantlib-bond:latest"
