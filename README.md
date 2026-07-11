@@ -28,5 +28,7 @@ pip install QuantLib==1.42.1
 python bond/runner.py bond/bond_spec.json
 ```
 
+Or this can be used via the "Use the classic import" option on Model Home when creating a new model.
+
 See [`CLAUDE.md`](./CLAUDE.md) for the full design notes, the Modelfile format,
 verified results, and the project task list.
