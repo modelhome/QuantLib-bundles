@@ -10,7 +10,8 @@ Composition hook: if ``climate_risk_premium`` (decimal, e.g. 0.0125) is present
 in the input, it is added as a parallel spread to the discount curve. This lets
 the model sit downstream of a climate/damage model (e.g. DicePy) as well as run
 standalone. Any missing bond parameters fall back to sensible defaults so the
-model is composable both ways.
+model is composable both ways; a parameter that is present but empty ("" or
+null) is treated the same as a missing one.
 """
 import sys
 import json
@@ -72,8 +73,8 @@ def to_date(iso):
 def build_curve(spec, settlement_days, cal, premium):
     """Return a YieldTermStructureHandle from a flat rate or zero-rate nodes,
     optionally shifted by a parallel ``premium`` spread."""
-    ctype = spec.get("type", "flat")
-    dc = day_counter(spec.get("day_count", "Actual365Fixed"))
+    ctype = spec.get("type") or "flat"
+    dc = day_counter(spec.get("day_count") or "Actual365Fixed")
 
     if ctype == "flat":
         rate = float(spec.get("rate", 0.04))
@@ -103,26 +104,32 @@ def build_curve(spec, settlement_days, cal, premium):
 
 
 def price(spec):
+    # `x.get(k) or default` rather than `x.get(k, default)` throughout: an
+    # upstream flow step (or a hand-edited example) can send a key through as ""
+    # or null, and a present-but-empty value should fall back the same way a
+    # missing one does. Numeric fields deliberately keep `.get(k, default)` --
+    # `or` there would rewrite a legitimate 0 into the default.
+
     # ---- valuation date & conventions ----
-    val = spec.get("valuation_date", "2026-05-24")
+    val = spec.get("valuation_date") or "2026-05-24"
     ql.Settings.instance().evaluationDate = to_date(val)
 
     settlement_days = int(spec.get("settlement_days", 2))
-    cal = calendar(spec.get("calendar", "TARGET"))
-    biz = BUSINESS_CONVENTION.get(spec.get("business_convention", "Following"),
+    cal = calendar(spec.get("calendar") or "TARGET")
+    biz = BUSINESS_CONVENTION.get(spec.get("business_convention") or "Following",
                                   ql.Following)
 
-    bond_spec = spec.get("bond", {})
-    issue = to_date(bond_spec.get("issue_date", "2020-06-01"))
-    maturity = to_date(bond_spec.get("maturity_date", "2030-06-01"))
+    bond_spec = spec.get("bond") or {}
+    issue = to_date(bond_spec.get("issue_date") or "2020-06-01")
+    maturity = to_date(bond_spec.get("maturity_date") or "2030-06-01")
     coupon = float(bond_spec.get("coupon_rate", 0.05))
     face = float(bond_spec.get("face", 100.0))
-    freq = FREQUENCY.get(bond_spec.get("frequency", "Semiannual"), ql.Semiannual)
-    dc = day_counter(bond_spec.get("day_count", "Thirty360"))
+    freq = FREQUENCY.get(bond_spec.get("frequency") or "Semiannual", ql.Semiannual)
+    dc = day_counter(bond_spec.get("day_count") or "Thirty360")
 
     # ---- discount curve (+ optional climate spread) ----
     premium = spec.get("climate_risk_premium")
-    curve = build_curve(spec.get("discount_curve", {"type": "flat", "rate": 0.04}),
+    curve = build_curve(spec.get("discount_curve") or {"type": "flat", "rate": 0.04},
                         settlement_days, cal, premium)
 
     # ---- build & price the bond ----
