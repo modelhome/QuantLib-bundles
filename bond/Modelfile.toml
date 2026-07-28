@@ -12,35 +12,115 @@ cpu = "1"
 
 [[inputs]]
 # Single input object describing the bond, the discount curve, and conventions.
-# required = [] keeps the model composable: when run downstream of a climate /
-# damage model, only `climate_risk_premium` may be present and every bond
-# parameter falls back to a documented default. When run standalone, supply the
-# full object via the input file.
+# The shape itself now lives in [inputs.schema] below, so the platform can render
+# it as a field guide instead of it being a comment the TOML parser discards.
+# Only the rationale the schema cannot express is kept here:
 #
-# Shape:
-#   valuation_date        ISO date (default "2026-05-24")
-#   settlement_days       int     (default 2)
-#   calendar              "TARGET" | "UnitedStates" | "UnitedKingdom"
-#   business_convention   "Following" | "ModifiedFollowing" | "Unadjusted" | ...
-#   bond.issue_date       ISO date
-#   bond.maturity_date    ISO date
-#   bond.coupon_rate      decimal, e.g. 0.05
-#   bond.frequency        "Annual" | "Semiannual" | "Quarterly" | "Monthly"
-#   bond.face             number (default 100)
-#   bond.day_count        "Thirty360" | "ActualActual" | "Actual360" | "Actual365Fixed"
-#   discount_curve.type   "flat" | "zero_nodes"
-#     flat:        { "rate": 0.04, "day_count": "Actual365Fixed" }
-#     zero_nodes:  { "nodes": [ { "date": ISO, "rate": decimal }, ... ] }
-#   climate_risk_premium  decimal spread added in parallel to the curve (optional)
+# required = [] at every level keeps the model composable. When run downstream of
+# a climate / damage model, only `climate_risk_premium` may be present and every
+# bond parameter falls back to a documented default in runner.py. The top-level
+# `default` below — not `required` — is what makes the platform's generated
+# "Example to paste" a complete spec that runs as-is.
 name = "bond_spec"
 
 [inputs.schema]
 type = "object"
 required = []
-properties.valuation_date.type = "string"
-properties.climate_risk_premium.type = "number"
-properties.bond.type = "object"
-properties.discount_curve.type = "object"
+description = "The bond, the discount curve, and the date conventions to price with. Every field is optional: anything left out falls back to the value shown in the example, so this model runs standalone from a full spec or downstream of a climate model that supplies only `climate_risk_premium`."
+# A complete, runnable spec, mirroring this bundle's tested bond/bond_spec.json:
+# a 5% semiannual bond maturing 2030-06-01 priced off a flat 4% curve. The
+# platform offers this verbatim as the "Example to paste", so it must stay
+# runnable — verify with `python bond/runner.py` before changing it.
+default = { valuation_date = "2026-05-24", settlement_days = 2, calendar = "TARGET", business_convention = "Following", bond = { issue_date = "2020-06-01", maturity_date = "2030-06-01", coupon_rate = 0.05, frequency = "Semiannual", face = 100.0, day_count = "Thirty360" }, discount_curve = { type = "flat", rate = 0.04, day_count = "Actual365Fixed" } }
+
+[inputs.schema.properties.valuation_date]
+type = "string"
+description = "The date to price as of, as an ISO date (YYYY-MM-DD). Defaults to 2026-05-24."
+
+[inputs.schema.properties.settlement_days]
+type = "integer"
+description = "Business days between the valuation date and settlement. Defaults to 2."
+
+[inputs.schema.properties.calendar]
+type = "string"
+enum = ["TARGET", "UnitedStates", "UnitedKingdom"]
+description = "Holiday calendar used to adjust coupon and settlement dates. Defaults to TARGET, the euro-area calendar."
+
+[inputs.schema.properties.business_convention]
+type = "string"
+enum = ["Following", "ModifiedFollowing", "Preceding", "ModifiedPreceding", "Unadjusted"]
+description = "How a coupon date landing on a holiday is shifted. Defaults to Following, which moves it to the next business day."
+
+[inputs.schema.properties.climate_risk_premium]
+type = "number"
+description = "Optional spread added in parallel across the whole discount curve, as a decimal (0.0125 = 125 basis points). This is the composition hook: leave it out to price the bond on its own, or feed it from an upstream climate/damage model. Omitted or 0 applies no spread."
+
+[inputs.schema.properties.bond]
+type = "object"
+required = []
+description = "The bond's own terms. Anything left out falls back to the value shown in the example."
+
+[inputs.schema.properties.bond.properties.issue_date]
+type = "string"
+description = "Dated date the coupon schedule is generated from, as an ISO date (YYYY-MM-DD). Defaults to 2020-06-01."
+
+[inputs.schema.properties.bond.properties.maturity_date]
+type = "string"
+description = "Redemption date, as an ISO date (YYYY-MM-DD). Defaults to 2030-06-01."
+
+[inputs.schema.properties.bond.properties.coupon_rate]
+type = "number"
+description = "Annual coupon as a decimal, not a percentage (0.05 = 5%). Defaults to 0.05."
+
+[inputs.schema.properties.bond.properties.frequency]
+type = "string"
+enum = ["Annual", "Semiannual", "Quarterly", "Monthly"]
+description = "How often the coupon pays. Defaults to Semiannual."
+
+[inputs.schema.properties.bond.properties.face]
+type = "number"
+description = "Face (par) amount the price is quoted against. Defaults to 100."
+
+[inputs.schema.properties.bond.properties.day_count]
+type = "string"
+enum = ["Thirty360", "ActualActual", "Actual360", "Actual365Fixed"]
+description = "Day-count basis used for accrued interest and yield. Defaults to Thirty360."
+
+[inputs.schema.properties.discount_curve]
+type = "object"
+required = []
+description = "The curve the cash flows are discounted on: either a single flat rate or a set of zero-rate nodes. Defaults to a flat 4%."
+
+[inputs.schema.properties.discount_curve.properties.type]
+type = "string"
+enum = ["flat", "zero_nodes"]
+description = "`flat` uses one `rate` at every maturity. `zero_nodes` interpolates a real term structure through `nodes`. Defaults to flat."
+
+[inputs.schema.properties.discount_curve.properties.rate]
+type = "number"
+description = "Flat curves only: the zero rate as a decimal (0.04 = 4%). Defaults to 0.04. Ignored when type is zero_nodes."
+
+[inputs.schema.properties.discount_curve.properties.day_count]
+type = "string"
+enum = ["Thirty360", "ActualActual", "Actual360", "Actual365Fixed"]
+description = "Day-count basis for the curve itself. Defaults to Actual365Fixed."
+
+[inputs.schema.properties.discount_curve.properties.nodes]
+type = "array"
+description = "Required when type is zero_nodes, ignored when type is flat: the zero-rate term structure as points sorted by date. QuantLib interpolates between them, and anchors the curve at the valuation date using the first node's rate."
+
+[inputs.schema.properties.discount_curve.properties.nodes.items]
+type = "object"
+required = []
+description = "One point on the zero curve. Both fields are needed for the point to be usable."
+
+[inputs.schema.properties.discount_curve.properties.nodes.items.properties.date]
+type = "string"
+description = "Maturity of this point, as an ISO date (YYYY-MM-DD)."
+
+[inputs.schema.properties.discount_curve.properties.nodes.items.properties.rate]
+type = "number"
+description = "Zero rate at this maturity, as a decimal (0.038 = 3.8%)."
 
 [[outputs]]
 name = "bond_metrics"
