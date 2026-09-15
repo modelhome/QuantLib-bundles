@@ -1,7 +1,7 @@
-# to build and run from your local machine (run from the repo root, not from
-# bond/ — Model Home's overlay puts the bundle clone at the build-context root,
-# so we use repo-relative paths to keep local and on-platform builds in sync):
-#   docker build -f bond/Dockerfile -t quantlib-bond:local .
+# to build and run from your local machine (build context is this bond/ folder,
+# which is also what Model Home uses when the model is added from
+# github.com/modelhome/QuantLib-bundles/tree/main/bond):
+#   cd bond && docker build -t quantlib-bond:local .
 #   docker run --rm quantlib-bond:local                 # uses default bond_spec.json
 #   docker run --rm -v "$PWD/run:/run" quantlib-bond:local /run/bond_spec.json
 
@@ -14,7 +14,7 @@ WORKDIR /app
 RUN pip install --no-cache-dir -U pip \
     && pip install --no-cache-dir QuantLib==1.42.1
 
-COPY bond/runner.py bond/bond_spec.json ./
+COPY runner.py bond_spec.json ./
 
 ENTRYPOINT ["python", "runner.py"]
 
